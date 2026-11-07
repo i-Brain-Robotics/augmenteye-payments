@@ -253,9 +253,9 @@
   ],
   "policies": {
     "purchase": "The selected AugmentEYE complete unit or accessory is a one-time purchase.",
-    "delivery": "Free shipping in the US. Global shipping: $150 per order. Customs duties are not included in global shipping and are the responsibility of the recipient. US delivery estimate: 3\u20135 business days. International: 7\u201315 business days. Florida sales tax: 7%.",
+    "delivery": "Free shipping in the US. Global shipping: $150 per order. Customs duties are not included in global shipping and are the responsibility of the recipient. US delivery estimate: 3–5 business days. International: 7–15 business days. Florida sales tax: 7%.",
     "returns": "No returns or refunds.\nReplacement request accepted only for defective items reported within 24 hours of the receipt of the product..",
-    "warranty": "",
+    "warranty": "Defective-item replacement requests must be reported within 24 hours of receipt. Contact info@ibrainrobotics.net with your order number for coverage and replacement assistance.",
     "support": "info@ibrainrobotics.net",
     "software": "No recurring software charge is added to this hardware order."
   },
@@ -309,7 +309,7 @@
     },
     {
       "id": "checkout-test-free",
-      "name": "AugmentEYE \u2014 Free checkout verification",
+      "name": "AugmentEYE — Free checkout verification",
       "once": 0,
       "monthly": 0,
       "kind": "digital",
@@ -320,7 +320,7 @@
     },
     {
       "id": "checkout-test-paypal",
-      "name": "AugmentEYE \u2014 PayPal checkout verification",
+      "name": "AugmentEYE — PayPal checkout verification",
       "once": 10,
       "monthly": 0,
       "kind": "digital",
