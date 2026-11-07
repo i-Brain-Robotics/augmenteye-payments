@@ -13,6 +13,7 @@ export function validateCatalog(c) {
   return c;
 }
 export function quote(c,input={}) {
+  if(input.items!==undefined)return quoteBasket(c,input);
   if(Object.keys(input).some(k=>!['sku','quantity','country','region','installation'].includes(k)))throw new CheckoutError(400,'Choose a product from the catalog.');
   const item=c.items.find(p=>p.id===input.sku);
   if(!item)throw new CheckoutError(400,'Choose an available product.');
@@ -29,6 +30,21 @@ export function quote(c,input={}) {
   if(!integer(amount,isVerificationItem(item)&&item.once===0?0:1))throw new CheckoutError(400,'Please contact us for an order of this size.');
   return {sku:item.id,name:item.name,kind:item.kind,quantity,country,region,installation,hardware,shipping,install,tax,once,monthly,amount,currency:'USD',catalogHash:digest(c),credits:item.credits||0,planId:item.planId||null,...(isVerificationItem(item)?{testOnly:true,allowedProviders:item.allowedProviders}:{})};
 }
+export function quoteBasket(c,input){
+  if(c.id!=='augmenteye'||Object.keys(input).some(k=>!['items','country','region','installation'].includes(k))||!Array.isArray(input.items)||input.items.length<1||input.items.length>10||new Set(input.items.map(p=>p?.sku)).size!==input.items.length)throw new CheckoutError(400,'Choose an available bag.');
+  const country=input.country??'US',region=typeof input.region==='string'?input.region.trim().toUpperCase():'';
+  if(!c.countries.includes(country)||input.region!==undefined&&typeof input.region!=='string'||region.length>80||country==='US'&&!/^[A-Z]{2}$/.test(region)||input.installation!==undefined&&input.installation!==false)throw new CheckoutError(400,'Check the delivery destination.');
+  const items=input.items.map(line=>{
+    if(!line||typeof line!=='object'||Object.keys(line).some(k=>!['sku','quantity'].includes(k)))throw new CheckoutError(400,'Choose a product from the catalog.');
+    const p=c.items.find(p=>p.id===line.sku);
+    if(!p||p.testOnly||p.kind!=='physical'||p.monthly!==0||!integer(line.quantity,1,10))throw new CheckoutError(400,'Choose an available product and quantity.');
+    return {sku:p.id,name:p.name,quantity:line.quantity,unit:p.once,total:p.once*line.quantity};
+  });
+  const hardware=items.reduce((sum,p)=>sum+p.total,0),shipping=country==='US'?c.delivery.us:c.delivery.global,tax=country==='US'&&region==='FL'?Math.round((hardware+shipping)*c.delivery.floridaBps/10000):0,amount=hardware+shipping+tax;
+  if(!integer(amount,1))throw new CheckoutError(400,'Please contact us for an order of this size.');
+  const name='AugmentEYE · '+items.map(p=>p.sku+' × '+p.quantity).join(', ');
+  return {sku:'basket',name,kind:'physical',quantity:items.reduce((n,p)=>n+p.quantity,0),items,country,region,installation:false,hardware,shipping,install:0,tax,once:amount,monthly:0,amount,currency:'USD',catalogHash:digest(c),credits:0,planId:null};
+}
 export function origin(value,dev=false){try{const u=new URL(value);if(u.username||u.password||u.pathname!=='/'||u.search||u.hash||!(u.protocol==='https:'||dev&&u.protocol==='http:'&&['localhost','127.0.0.1'].includes(u.hostname)))return null;return u.origin;}catch{return null;}}
 export function configuration(env,catalog){
   const mode=env.PAYMENT_MODE||'test',baseUrl=origin(env.PUBLIC_BASE_URL||env.RENDER_EXTERNAL_URL,env.NODE_ENV!=='production');
@@ -44,3 +60,4 @@ export function configuration(env,catalog){
   const verificationChecks={stripeKeyMatchesMode:new RegExp(`^(sk|rk)_${mode}_[A-Za-z0-9_]{8,}$`).test(env.STRIPE_SECRET_KEY||''),stripeWebhookConfigured:/^whsec_[A-Za-z0-9_]{8,}$/.test(env.STRIPE_WEBHOOK_SECRET||''),paypalCredentialsConfigured:[env.PAYPAL_CLIENT_ID,env.PAYPAL_CLIENT_SECRET].every(v=>typeof v==='string'&&v.length>=8&&!/placeholder|replace.?me|\s/i.test(v)),paypalWebhookConfigured:typeof env.PAYPAL_WEBHOOK_ID==='string'&&env.PAYPAL_WEBHOOK_ID.length>=8&&!/placeholder|replace.?me|\s/i.test(env.PAYPAL_WEBHOOK_ID),paypalModeMatches:(env.PAYPAL_MODE||(mode==='live'?'live':'sandbox'))===(mode==='live'?'live':'sandbox')};
   return {verificationChecks,verificationReady,baseUrl,storefrontUrl:catalog.storefront,mode,providers,ready,signingReady,policiesReady,fulfillmentReady,signingSecret:env.CHECKOUT_SIGNING_SECRET||'',stripeSecret:env.STRIPE_SECRET_KEY||'',stripeWebhookSecret:env.STRIPE_WEBHOOK_SECRET||'',paypalClient:env.PAYPAL_CLIENT_ID||'',paypalSecret:env.PAYPAL_CLIENT_SECRET||'',paypalWebhookId:env.PAYPAL_WEBHOOK_ID||'',paypalBase:mode==='live'?'https://api-m.paypal.com':'https://api-m.sandbox.paypal.com'};
 }
+
